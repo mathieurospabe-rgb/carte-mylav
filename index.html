@@ -47,7 +47,7 @@ function popup(p){return `<div class="pp"><h3>${p.nom||'(sans nom)'}</h3><div cl
  ${p.categorie&&p.categorie!=='Prospect'?'<span class="badge" style="background:#eef1f4;color:#6b7a8d">'+p.categorie+'</span>':''}</div></div>`;}
 function draw(){ cluster.clearLayers(); let n=0; const buf=[];
  all.forEach(f=>{const p=f.properties; if(!keep(p))return; n++; const[lon,lat]=f.geometry.coordinates;
-  buf.push(L.circleMarker([lat,lon],{radius:8,color:'#fff',weight:1.5,fillColor:p.color||GREY,fillOpacity:.9}).bindPopup(popup(p)));});
+  buf.push(L.circleMarker([lat,lon],{radius:16,color:'#fff',weight:2,fillColor:p.color||GREY,fillOpacity:.9}).bindPopup(popup(p)));});
  cluster.addLayers(buf);
  document.getElementById('tot').innerHTML=n.toLocaleString('fr-FR')+' <span>cliniques affichées</span>'; }
 function side(){ const rc={},cc={}; all.forEach(f=>{const p=f.properties;const r=REPS.includes(p.commercial)?p.commercial:'Autres';rc[r]=(rc[r]||0)+1;cc[p.categorie]=(cc[p.categorie]||0)+1;});
