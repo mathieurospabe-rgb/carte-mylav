@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cliniques vétérinaires MYLAV France</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<style>
+ *{box-sizing:border-box}html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:#1b2733}
+ #app{display:flex;height:100%}#side{width:288px;flex:none;border-right:1px solid #e4e9ef;background:#fff;display:flex;flex-direction:column;overflow:auto}#map{flex:1}
+ header{padding:16px 18px;border-bottom:1px solid #e4e9ef}header h1{font-size:15px;margin:0;letter-spacing:-.01em}header p{margin:3px 0 0;font-size:12px;color:#6b7a8d}
+ .tot{font-size:24px;font-weight:650;letter-spacing:-.02em;margin:14px 18px 0}.tot span{font-size:12px;font-weight:400;color:#6b7a8d}
+ .grp{padding:8px 12px 4px}.grp h2{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#8a97a7;margin:10px 6px 4px}
+ .row{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:8px;cursor:pointer;user-select:none}.row:hover{background:#f6f8fa}.row.off{opacity:.34}
+ .dot{width:12px;height:12px;border-radius:50%;flex:none;border:1px solid rgba(0,0,0,.12)}.row .nm{font-size:13px;flex:1}.row .ct{font-size:12px;color:#6b7a8d;font-variant-numeric:tabular-nums}
+ .note{margin-top:auto;padding:12px 18px;border-top:1px solid #e4e9ef;font-size:11px;color:#8a97a7;line-height:1.5}
+ .leaflet-popup-content{margin:12px 14px;font-size:13px;line-height:1.5}.pp h3{margin:0 0 3px;font-size:14px}.pp .a{color:#6b7a8d;font-size:12px}
+ .pp .meta{margin-top:7px}.badge{display:inline-block;font-size:11px;padding:1px 8px;border-radius:20px;margin:2px 4px 0 0}
+</style></head><body>
+<div id="app"><div id="side">
+ <header><h1>Cliniques vétérinaires MYLAV</h1><p>Suivi terrain France — par commercial</p></header>
+ <div class="tot" id="tot">…</div>
+ <div class="grp"><h2>Commercial</h2><div id="reps"></div></div>
+ <div class="grp"><h2>Catégorie</h2><div id="cats"></div></div>
+ <div class="note">Positionnement au niveau de la commune (code postal). Cliquez un amas pour l'éclater et voir chaque clinique. Vert = client MYLAV actif.</div>
+</div><div id="map"></div></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+const COLORS={"Dominique Barciet":"#2E6BB0","Julien Pauleau":"#3E9B4F","Kristine Kamosi":"#E08A2B","Quentin Légier":"#7E57C2"};
+const REPS=Object.keys(COLORS), GREY="#9E9E9E";
+const CATS=["Client actif","Prospect","Groupe / réseau","Hors cible (à vérifier)"];
+const map=L.map('map').setView([46.6,2.4],6);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap © CARTO',subdomains:'abcd',maxZoom:19}).addTo(map);
+const cluster=L.markerClusterGroup({maxClusterRadius:45,spiderfyOnMaxZoom:true,chunkedLoading:true});
+map.addLayer(cluster);
+let all=[]; const repOn=new Set(REPS.concat(["Corse (non assigné)","DOM-TOM (non assigné)","Non assigné"])); const catOn=new Set(CATS);
+function keep(p){ const r=REPS.includes(p.commercial)?p.commercial:"__autre__";
+  if(REPS.includes(p.commercial)&&!repOn.has(p.commercial))return false;
+  if(!REPS.includes(p.commercial)&&!repOn.has(p.commercial))return false;
+  if(!catOn.has(p.categorie))return false; return true; }
+function popup(p){return `<div class="pp"><h3>${p.nom||'(sans nom)'}</h3><div class="a">${p.adresse||''}</div>
+ <div class="meta">${p.tel?'📞 '+p.tel+'<br>':''}${p.email?'✉️ '+p.email+'<br>':''}
+ <span class="badge" style="background:${p.color}22;color:${p.color}">${p.commercial}</span>
+ ${p.client?'<span class="badge" style="background:#e7f6ec;color:#2b8a4a">client</span>':''}
+ ${p.doublon?'<span class="badge" style="background:#fdeceb;color:#c0392b">doublon</span>':''}
+ ${p.categorie&&p.categorie!=='Prospect'?'<span class="badge" style="background:#eef1f4;color:#6b7a8d">'+p.categorie+'</span>':''}</div></div>`;}
+function draw(){ cluster.clearLayers(); let n=0; const buf=[];
+ all.forEach(f=>{const p=f.properties; if(!keep(p))return; n++; const[lon,lat]=f.geometry.coordinates;
+  buf.push(L.circleMarker([lat,lon],{radius:5,color:'#fff',weight:1,fillColor:p.color||GREY,fillOpacity:.85}).bindPopup(popup(p)));});
+ cluster.addLayers(buf);
+ document.getElementById('tot').innerHTML=n.toLocaleString('fr-FR')+' <span>cliniques affichées</span>'; }
+function side(){ const rc={},cc={}; all.forEach(f=>{const p=f.properties;const r=REPS.includes(p.commercial)?p.commercial:'Autres';rc[r]=(rc[r]||0)+1;cc[p.categorie]=(cc[p.categorie]||0)+1;});
+ const rb=document.getElementById('reps'); rb.innerHTML='';
+ REPS.forEach(c=>{const e=document.createElement('div');e.className='row';e.innerHTML=`<span class="dot" style="background:${COLORS[c]}"></span><span class="nm">${c}</span><span class="ct">${(rc[c]||0).toLocaleString('fr-FR')}</span>`;
+  e.onclick=()=>{repOn.has(c)?repOn.delete(c):repOn.add(c);e.classList.toggle('off');draw();};rb.appendChild(e);});
+ const cb=document.getElementById('cats'); cb.innerHTML='';
+ CATS.forEach(c=>{const e=document.createElement('div');e.className='row';e.innerHTML=`<span class="nm">${c}</span><span class="ct">${(cc[c]||0).toLocaleString('fr-FR')}</span>`;
+  e.onclick=()=>{catOn.has(c)?catOn.delete(c):catOn.add(c);e.classList.toggle('off');draw();};cb.appendChild(e);});}
+fetch('cliniques.geojson').then(r=>r.json()).then(d=>{all=d.features;side();draw();})
+ .catch(e=>{document.getElementById('tot').textContent='Erreur : cliniques.geojson introuvable';});
+</script></body></html>
